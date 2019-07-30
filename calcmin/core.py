@@ -1,66 +1,110 @@
 # -*- coding: utf-8 -*-
 """
-Class to estimate reference ET (ETo) from the FAO 56 paper using a minimum of T_min and T_max for daily estimates and T_mean and RH_mean for hourly, but utilizing the maximum number of available met parameters. The function prioritizes the estimation of specific parameters based on the available input data.
+
 """
+import os
 import pandas as pd
-from copy import copy
-from eto.param_est import param_est
-from eto.methods.ETo import eto_fao
-from eto.methods.hargreaves import hargreaves
-
-#from param_est import param_est
-#from methods.ETo import eto_fao
-#from methods.hargreaves import hargreaves
+from pdsql import mssql
+from scipy.stats import rankdata
+import yaml
 
 
-class ETo(object):
+pd.options.display.max_columns = 10
+run_time_start = pd.Timestamp.today()
+
+###########################################
+#### Parameters
+
+base_dir = os.path.realpath(os.path.dirname(__file__))
+
+with open(os.path.join(base_dir, 'parameters.yml')) as param:
+    param = yaml.safe_load(param)
+
+to_date = run_time_start.floor('H')
+from_date = (to_date - pd.DateOffset(days=7)).round('D')
+
+
+
+###########################################
+### Functions
+
+
+class CalcMin(object):
     """
-    Class to handle the parameter estimation of metereological values and the calcuation of reference ET and similar ET methods.
 
-    This class can be either initiated with empty parameters or will initialise to the param_est function.
     """
 
-
-    def __init__(self, df=None, freq='D', z_msl=None, lat=None, lon=None, TZ_lon=None, z_u=2, K_rs=0.16, a_s=0.25, b_s=0.5, alb=0.23):
-
-        if df is None:
-            pass
-        else:
-            self.param_est(df, freq, z_msl, lat, lon, TZ_lon, z_u, K_rs, a_s, b_s, alb)
-
-
-    @staticmethod
-    def tsreg(ts, freq=None, interp=False, maxgap=None):
-        """
-        Function to regularize a time series object (pandas).
-        The first three indeces must be regular for freq=None!!!
-
-        Parameters
-        ----------
-        ts : DataFrame
-            With a DateTimeIndex.
-        freq : str or None
-            Either specify the known frequency of the data or use None and
-        determine the frequency from the first three indices.
-        interp : str
-            Interpolation method.
-
-        Returns
-        -------
-        DataFrame
+    def __init__(self, min_values=5, where_in=None, quantile=0.2):
         """
 
-        if freq is None:
-            freq = pd.infer_freq(ts.index[:3])
-        ts1 = ts.resample(freq).mean()
-        if isinstance(interp, str):
-            ts1 = ts1.interpolate(interp, limit=maxgap)
+        """
+        ## Get sites and summary data
+        sites1 = mssql.rd_sql(param['input']['ts_server'], param['input']['ts_database'], param['input']['sites_table'], ['ExtSiteID', 'NZTMX', 'NZTMY', 'Altitude', 'CatchmentName', 'CatchmentGroupName', 'SwazName', 'SwazGroupName', 'GwazName', 'CwmsName'], where_in=where_in)
+        sites2 = sites1[sites1.ExtSiteID.str.contains('[A-Z]+\d+/\d+')]
 
-        return ts1
+        summ1 = mssql.rd_sql(param['input']['ts_server'], param['input']['ts_database'], param['input']['ts_summ_table'], ['ExtSiteID', 'Min', 'Median', 'Mean', 'Max', 'Count', 'FromDate', 'ToDate'], where_in={'DatasetTypeID': [param['input']['ts_dataset']]})
+        summ2 = summ1[summ1.Count >= min_values].copy()
 
-### Add in the ETo methods and other functions
-ETo.param_est = param_est
-ETo.eto_fao = eto_fao
-ETo.eto_hargreaves = hargreaves
-ETo.copy = copy
+        sites3 = sites2[sites2.ExtSiteID.isin(summ2.ExtSiteID)].copy()
+
+        ## Get TS data
+        tsdata1 = mssql.rd_sql(param['input']['ts_server'], param['input']['ts_database'], param['input']['ts_table'], ['ExtSiteID', 'DateTime', 'Value'], where_in={'ExtSiteID': sites3.ExtSiteID.tolist(), 'DatasetTypeID': [param['input']['ts_dataset']], 'QualityCode': param['input']['ts_quality_codes']})
+        tsdata1.DateTime = pd.to_datetime(tsdata1.DateTime)
+
+        # Summarise by month
+        tsdata1['mon'] = tsdata1.DateTime.dt.month
+        tsdata1['year'] = tsdata1.DateTime.dt.year
+        tsdata2 = tsdata1.loc[tsdata1['mon'].isin([5])].groupby(['ExtSiteID', 'year', 'mon']).mean().reset_index()
+
+        tsmon1 = tsdata2.groupby(['ExtSiteID', 'mon']).Value.count()
+        tsmon2 = tsmon1.groupby(level='ExtSiteID').max()
+        good_sites = tsmon2[tsmon2 >= min_values]
+        tsdata3 = tsdata2.loc[tsdata2.ExtSiteID.isin(good_sites.index)]
+
+        ## Calc percentiles
+        quant1 = tsdata3.groupby('ExtSiteID')['Value'].quantile(quantile)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
