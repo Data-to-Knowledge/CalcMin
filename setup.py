@@ -18,7 +18,7 @@ version = '0.0.1'
 if os.environ.get('READTHEDOCS', False) == 'True':
     INSTALL_REQUIRES = []
 else:
-    INSTALL_REQUIRES = ['pandas', 'pdsql', 'hydrointerp']
+    INSTALL_REQUIRES = ['pandas', 'pdsql', 'hydrointerp', 'yaml']
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
