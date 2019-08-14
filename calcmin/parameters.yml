@@ -7,6 +7,8 @@ input:
   ts_quality_codes: [200]
   sites_table: 'ExternalSite'
   site_feature_table: 'SiteFeature'
+  site_feature_parameters: ['HighestTopScreen', 'LowestBottomScreen', 'WellDepth']
+  well_depth_bins: [0, 15, 50, 100, 10000]
 
   # wells_server: sql2012prod04
   # wells_database: Wells

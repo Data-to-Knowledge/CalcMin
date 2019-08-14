@@ -1,6 +1,6 @@
-{% set name = "ETo" %}
-{% set version = "1.1.0" %}
-{% set sha256 = "1c13f17a480d9c0fbf15001ec0beb4ec88b1417899194670a586603c566174c0" %}
+{% set name = "CalcMin" %}
+{% set version = "0.0.1" %}
+{% set sha256 = "759d60f7694430e817b1c56ec137aee40dcbea9db04857121b19df9248b28d37" %}
 
 # sha256 is the prefered checksum -- you can get it for a file with:
 #  `openssl sha256 <file name>`.
@@ -36,17 +36,18 @@ requirements:
     - setuptools
   run:
     - python
-    - pandas
+    - pdsql
+    - hydrointerp
 
 test:
   imports:
-    - eto
+    - calcmin
 
 about:
-  home: https://github.com/mullenkamp/ETo
+  home: https://github.com/Data-to-Knowledge/CalcMin
   license: Apache License 2.0
   license_family: APACHE
-  summary: Functions to estimate reference evapotranspiration
+  summary: Function to calculate the ECan CalcMin
   description: ""
   doc_url: ''
   dev_url: ''
