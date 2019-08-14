@@ -1,6 +1,6 @@
 {% set name = "CalcMin" %}
-{% set version = "0.0.1" %}
-{% set sha256 = "759d60f7694430e817b1c56ec137aee40dcbea9db04857121b19df9248b28d37" %}
+{% set version = "0.0.2" %}
+{% set sha256 = "e5500199f3a536e1f70b93fdc091584a46aea4dc2dbbe6eb071122cc9ff46e6f" %}
 
 # sha256 is the prefered checksum -- you can get it for a file with:
 #  `openssl sha256 <file name>`.
