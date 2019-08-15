@@ -10,7 +10,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 name = 'CalcMin'
 main_package = 'calcmin'
 # datasets = 'datasets'
-version = '0.0.2'
+version = '0.0.3'
 
 # The below code is for readthedocs. To have sphinx/readthedocs interact with
 # the contained package, readthedocs needs to build the package. But the dependencies
@@ -18,7 +18,7 @@ version = '0.0.2'
 if os.environ.get('READTHEDOCS', False) == 'True':
     INSTALL_REQUIRES = []
 else:
-    INSTALL_REQUIRES = ['pandas', 'pdsql', 'hydrointerp', 'yaml']
+    INSTALL_REQUIRES = ['pandas', 'pdsql', 'hydrointerp', 'pyyaml']
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:

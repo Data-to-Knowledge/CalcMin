@@ -1,6 +1,6 @@
 {% set name = "CalcMin" %}
-{% set version = "0.0.2" %}
-{% set sha256 = "e5500199f3a536e1f70b93fdc091584a46aea4dc2dbbe6eb071122cc9ff46e6f" %}
+{% set version = "0.0.3" %}
+{% set sha256 = "2e99e970feb419bd158708430db89ab82148781b47322f0fb0fdf08bc61480a1" %}
 
 # sha256 is the prefered checksum -- you can get it for a file with:
 #  `openssl sha256 <file name>`.
@@ -38,7 +38,7 @@ requirements:
     - python
     - pdsql
     - hydrointerp
-    - yaml
+    - pyyaml
 
 test:
   imports:
