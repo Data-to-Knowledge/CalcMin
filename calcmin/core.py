@@ -70,7 +70,7 @@ def grp_ts_agg(df, grp_col, ts_col, freq_code, discrete=False, **kwargs):
 ### Main function
 
 
-def calcmin(min_values=5, quantile=0.2, month=5, start_year='2001', where_in=None):
+def calcmin(min_values=5, quantile=0.2, month=5, start_year='2000', where_in=None, well_depth_bins=[0, 20, 10000]):
     """
     Function to calculate the specified groundwater level quantile for a specific month and interpolate those values across all other available wells.
 
@@ -135,7 +135,7 @@ def calcmin(min_values=5, quantile=0.2, month=5, start_year='2001', where_in=Non
     attr1.rename(columns={'Value': 'WellDepth'}, inplace=True)
 
     ## Categorise well depths
-    attr1['DepthCat'] = pd.cut(attr1.WellDepth, bins=param['input']['well_depth_bins'], labels=[0, 15, 50, 100])
+    attr1['DepthCat'] = pd.cut(attr1.WellDepth, bins=well_depth_bins, labels=well_depth_bins[:-1])
     attr1.dropna(inplace=True)
 
     ## Interpolate wells
@@ -146,14 +146,17 @@ def calcmin(min_values=5, quantile=0.2, month=5, start_year='2001', where_in=Non
     quant4['GwlQuantile'] = quant4['GwlQuantile'] + quant4['Altitude']
     sites_other = sites_xy[~sites_xy.ExtSiteID.isin(quant4.ExtSiteID.unique())].copy()
 
-    quant5 = quant4.replace({'DepthCat': {0: '2000-01-01', 15: '2000-01-02', 50: '2000-01-03', 100: '2000-01-04'}})
+    cat_dates = pd.date_range('2000-01-01', periods=len(well_depth_bins), freq='D')
+    cat_dict1 = dict(zip(well_depth_bins, cat_dates))
+    cat_dict2 = dict(zip(cat_dates, well_depth_bins))
+
+    quant5 = quant4.replace({'DepthCat': cat_dict1})
     quant5 = quant5.groupby(['x', 'y', 'DepthCat'])['GwlQuantile'].mean().reset_index()
     interp1 = Interp(point_data=quant5, point_time_name='DepthCat', point_x_name='x', point_y_name='y', point_data_name='GwlQuantile', point_crs=2193)
     q_interp1 = interp1.points_to_points(sites_other.drop_duplicates(['x', 'y']), to_crs=2193)
 
     q_interp2 = q_interp1.reset_index()
-    q_interp2['time'] = q_interp2['time'].astype(str)
-    q_interp2.replace({'time': {'2000-01-01': 0, '2000-01-02': 15, '2000-01-03': 50, '2000-01-04': 100}}, inplace=True)
+    q_interp2.replace({'time': cat_dict2}, inplace=True)
     q_interp2.rename(columns={'time': 'DepthCat', 'precip': 'GwlQuantile'}, inplace=True)
 
     q_other1 = pd.merge(sites_other, q_interp2, on=['x', 'y', 'DepthCat'])
