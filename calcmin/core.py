@@ -70,7 +70,7 @@ def grp_ts_agg(df, grp_col, ts_col, freq_code, discrete=False, **kwargs):
 ### Main function
 
 
-def calcmin(min_values=5, quantile=0.2, month=5, start_year='2000', where_in=None, well_depth_bins=[0, 20, 10000]):
+def calcmin(min_values=5, quantile=0.2, month=5, start_year='2000', where_in=None, well_depth_bins=[0, 20, 10000], reference_level='ground'):
     """
     Function to calculate the specified groundwater level quantile for a specific month and interpolate those values across all other available wells.
 
@@ -86,6 +86,10 @@ def calcmin(min_values=5, quantile=0.2, month=5, start_year='2000', where_in=Non
         The month to select the data from.
     start_year : str
         The year the data will start from.
+    well_depth_bins : list of int (or float)
+        The depth categorization bins for the interpolations. e.g. a list of three values would have two bin categories.
+    reference_level : str
+        The reference level to adjust the groundwater levels. Use either 'ground' for below ground, or 'msl' to use the altitude (which is referenced above mean sea level).
 
     Returns
     -------
@@ -130,20 +134,25 @@ def calcmin(min_values=5, quantile=0.2, month=5, start_year='2000', where_in=Non
     quant1.name = 'GwlQuantile'
 
     ## Get additional well attributes
-    attr1 = mssql.rd_sql(param['input']['ts_server'], param['input']['ts_database'], param['input']['site_feature_table'], ['ExtSiteID', 'Value'], where_in={'Parameter': ['WellDepth']})
+    attr1 = mssql.rd_sql(param['input']['ts_server'], param['input']['ts_database'], param['input']['site_feature_table'], ['ExtSiteID', 'Parameter', 'Value'], where_in={'Parameter': ['WellDepth', 'DepthToGroundFromRL']})
     attr1['Value'] = pd.to_numeric(attr1.Value, errors='coerce')
-    attr1.rename(columns={'Value': 'WellDepth'}, inplace=True)
+    attr2 = attr1.set_index(['ExtSiteID', 'Parameter']).Value.unstack(1)
 
     ## Categorise well depths
-    attr1['DepthCat'] = pd.cut(attr1.WellDepth, bins=well_depth_bins, labels=well_depth_bins[:-1])
-    attr1.dropna(inplace=True)
+    attr2['DepthCat'] = pd.cut(attr2.WellDepth, bins=well_depth_bins, labels=well_depth_bins[:-1])
+    attr2 = attr2.dropna().reset_index()
 
     ## Interpolate wells
     sites_xy = sites2[['ExtSiteID', 'NZTMX', 'NZTMY', 'Altitude']].dropna().copy()
     sites_xy.rename(columns={'NZTMX': 'x', 'NZTMY': 'y'}, inplace=True)
-    sites_xy = pd.merge(sites_xy, attr1, on='ExtSiteID')
+    sites_xy = pd.merge(sites_xy, attr2, on='ExtSiteID')
     quant4 = pd.merge(sites_xy, quant1, on='ExtSiteID')
-    quant4['GwlQuantile'] = quant4['GwlQuantile'] + quant4['Altitude']
+    if reference_level == 'ground':
+        quant4['GwlQuantile'] = quant4['GwlQuantile'] + quant4['DepthToGroundFromRL']
+    elif reference_level == 'msl':
+        quant4['GwlQuantile'] = quant4['GwlQuantile'] + quant4['Altitude']
+    else:
+        raise ValueError("reference_level must be either 'ground' or 'msl'")
     sites_other = sites_xy[~sites_xy.ExtSiteID.isin(quant4.ExtSiteID.unique())].copy()
 
     cat_dates = pd.date_range('2000-01-01', periods=len(well_depth_bins), freq='D')
